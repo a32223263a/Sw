@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 import {
   ChevronRight,
   AlertTriangle,
@@ -877,7 +878,13 @@ export function HighRiskApprovalPage() {
       )}
       {showApproveModal && (
         <ApproveConfirmModal
-          onConfirm={() => { setShowApproveModal(false); setDone("approved"); }}
+          onConfirm={() => {
+            setShowApproveModal(false);
+            setDone("approved");
+            toast.success("고위험 문서 최종 승인 완료", {
+              description: "2FA 인증 및 결재 처리가 정상적으로 완료되었습니다.",
+            });
+          }}
           onClose={() => setShowApproveModal(false)}
         />
       )}

@@ -765,7 +765,10 @@ export function isDocumentDataFilled(formType: FormType, data: DocumentData): bo
   return (data.purpose || "").trim().length > 0;
 }
 
-/** content (HTML) 스냅샷 생성 (실제로는 서버에서 XSS 필터 후 저장) */
+// 주의: 프론트엔드는 순수 HTML 텍스트만 전송합니다. XSS 방어 및 데이터 정제는 백엔드의 HtmlSanitizerAdapter(Filter Layer)에서 전적으로 수행합니다. (ADR-004 참조)
 export function buildContentSnapshot(formType: FormType, data: DocumentData): string {
-  return `<html><body>[XSS-filtered snapshot of ${formType}]\n${JSON.stringify(data, null, 2)}</body></html>`;
+  const rows = Object.entries(data)
+    .map(([k, v]) => `<tr><th>${k}</th><td>${typeof v === "string" ? v : JSON.stringify(v)}</td></tr>`)
+    .join("");
+  return `<html><body><h1>${formType}</h1><table>${rows}</table></body></html>`;
 }
