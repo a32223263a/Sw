@@ -19,6 +19,8 @@ import {
   RefreshCw,
   FileText,
   Hash,
+  Send,
+  AlertTriangle,
 } from "lucide-react";
 import {
   RichEditorPanel,
@@ -54,6 +56,113 @@ const DEFAULT_APPROVERS: Approver[] = [
 ];
 
 type FileItem = { id: number; name: string; size: string };
+
+/* ─────────────────────────────────────────────────
+   상신 확인 모달 (방어적 설계 — 재확인 패턴)
+───────────────────────────────────────────────── */
+function SubmitConfirmModal({
+  formType,
+  approvers,
+  onConfirm,
+  onClose,
+}: {
+  formType: string;
+  approvers: { name: string; title: string }[];
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <motion.div
+        className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative bg-white rounded-2xl shadow-2xl w-[480px] overflow-hidden border border-gray-200"
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+      >
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-gray-200 bg-blue-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0">
+              <Send size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-gray-800">결재 상신 확인</h3>
+              <p className="text-xs text-blue-600 mt-0.5">상신 전 아래 내용을 확인해 주세요.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+          {/* 양식 및 결재선 확인 */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">양식</span>
+              <span className="text-gray-800" style={{ fontWeight: 600 }}>{formType}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">결재선</span>
+              <div className="flex items-center gap-1.5">
+                {approvers.map((a, i) => (
+                  <span key={i} className="text-xs bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                    {a.name} {a.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 핵심 안내 — 방어적 설계 */}
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3.5">
+            <AlertTriangle size={15} className="text-amber-600 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm text-amber-900" style={{ fontWeight: 600 }}>상신 후 유의사항</p>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                결재 상신 후에는 <strong>다음 결재자가 열람하기 전까지만</strong> 수정 및 회수가 가능합니다. 결재자가 문서를 열람한 이후에는 내용 변경이 불가능합니다.
+              </p>
+            </div>
+          </div>
+
+          {/* 상신 결과 안내 */}
+          <div className="space-y-1.5">
+            {[
+              "상신 즉시 1차 결재자에게 알림이 발송됩니다.",
+              "문서 상태가 '결재 진행 중'으로 변경됩니다.",
+              "내 기안함 → 진행중 탭에서 결재 현황을 확인할 수 있습니다.",
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            돌아가기
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex items-center gap-2 px-6 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Send size={13} /> 안전하게 상신하기
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────────
    통합 스트림 스켈레톤 UI
@@ -274,6 +383,7 @@ export function ApprovalDocumentPage() {
   const [approvers] = useState<Approver[]>(DEFAULT_APPROVERS);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [showConstraintTooltip, setShowConstraintTooltip] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [documentData, setDocumentData] = useState<DocumentData>({
@@ -320,7 +430,12 @@ export function ApprovalDocumentPage() {
 
   const handleSubmit = () => {
     if (!isSubmitEnabled) return;
+    setShowSubmitModal(true);
+  };
+
+  const handleConfirmSubmit = () => {
     buildContentSnapshot(selectedForm, documentData);
+    setShowSubmitModal(false);
     navigate("/drafts/1");
   };
 
@@ -332,6 +447,7 @@ export function ApprovalDocumentPage() {
   ];
 
   return (
+    <>
     <AnimatePresence mode="wait">
       {isLoading ? (
         <motion.div
@@ -659,5 +775,15 @@ export function ApprovalDocumentPage() {
         </motion.div>
       )}
     </AnimatePresence>
+
+    {showSubmitModal && (
+      <SubmitConfirmModal
+        formType={selectedForm}
+        approvers={approvers.map((a) => ({ name: a.name, title: a.title }))}
+        onConfirm={handleConfirmSubmit}
+        onClose={() => setShowSubmitModal(false)}
+      />
+    )}
+    </>
   );
 }

@@ -15,6 +15,8 @@ import {
   Lock,
   ShieldCheck,
   RefreshCw,
+  AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 
 /* ─── Mock Data ─── */
@@ -45,6 +47,107 @@ const RISK_BADGE: Record<RiskLevel, { label: string; color: string }> = {
   MEDIUM: { label: "🟡 MEDIUM", color: "bg-amber-50 text-amber-700 border-amber-200" },
   LOW: { label: "🟢 LOW", color: "bg-green-50 text-green-700 border-green-200" },
 };
+
+/* ─── High Risk Block Modal ─── */
+function HighRiskBlockModal({
+  highRiskCount,
+  onClose,
+}: {
+  highRiskCount: number;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <motion.div
+        className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative bg-white rounded-2xl shadow-2xl w-[480px] overflow-hidden border border-red-200"
+        initial={{ opacity: 0, scale: 0.93, y: 18 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+      >
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-red-200 bg-red-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-100 border-2 border-red-300 flex items-center justify-center shrink-0">
+              <ShieldAlert size={20} className="text-red-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-gray-900">일괄 결재 차단</h3>
+              <p className="text-xs text-red-600 mt-0.5">보안 정책에 따라 일괄 승인이 차단되었습니다.</p>
+            </div>
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-100 transition-colors">
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+          {/* 에러 메시지 */}
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-4">
+            <AlertCircle size={18} className="text-red-600 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm text-red-800" style={{ fontWeight: 600 }}>
+                고위험 문서({highRiskCount}건)는 일괄 결재할 수 없습니다.
+              </p>
+              <p className="text-xs text-red-700 leading-relaxed">
+                보안 정책에 따라 개별 열람 및 2차 인증(2FA)을 진행해 주세요.
+              </p>
+            </div>
+          </div>
+
+          {/* API 에러 코드 표시 (ADR 추적성 증명) */}
+          <div className="bg-gray-900 rounded-lg px-4 py-3">
+            <p className="text-xs text-gray-500 mb-1">API 응답</p>
+            <p className="font-mono text-xs text-red-400">422 HIGH_RISK_DOCUMENT_INCLUDED</p>
+            <p className="font-mono text-xs text-gray-500 mt-0.5">
+              {"{ \"blocked\": ["}{PENDING_DOCS.find(d => d.risk === "HIGH")?.docNo}
+              {"], \"reason\": \"HIGH_RISK_REQUIRES_INDIVIDUAL_REVIEW\" }"}
+            </p>
+          </div>
+
+          {/* 해결 방법 안내 */}
+          <div className="space-y-2">
+            <p className="text-xs text-gray-600" style={{ fontWeight: 600 }}>해결 방법</p>
+            {[
+              { step: "1", text: "선택에서 고위험 문서(🔴)를 해제합니다." },
+              { step: "2", text: "남은 일반/중위험 문서를 일괄 승인합니다." },
+              { step: "3", text: "고위험 문서는 개별 클릭 후 2FA 인증으로 승인합니다." },
+            ].map((item) => (
+              <div key={item.step} className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center shrink-0 mt-0.5" style={{ fontWeight: 700 }}>
+                  {item.step}
+                </span>
+                <p className="text-xs text-gray-600 leading-relaxed">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            닫기
+          </button>
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <ArrowRight size={13} /> 선택 다시 조정하기
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 /* ─── Batch Auth Modal (simplified) ─── */
 function BatchAuthModal({
@@ -133,14 +236,9 @@ export function PendingListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [riskFilter, setRiskFilter] = useState<RiskLevel | "ALL">("ALL");
   const [showBatchModal, setShowBatchModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   const [batchDone, setBatchDone] = useState(false);
   const [batchCount, setBatchCount] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const filteredDocs = PENDING_DOCS.filter(
     (d) => riskFilter === "ALL" || d.risk === riskFilter
@@ -171,7 +269,7 @@ export function PendingListPage() {
 
   const handleBatchClick = () => {
     if (hasHighRiskSelected) {
-      showToast("⚠️ 고위험 문서는 일괄 결재할 수 없습니다. 개별 확인 후 승인해 주세요.");
+      setShowBlockModal(true);
       return;
     }
     if (selectedBatchable.length === 0) return;
@@ -418,22 +516,13 @@ export function PendingListPage() {
         />
       )}
 
-      {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-          >
-            <div className="flex items-center gap-2.5 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-2xl max-w-sm">
-              <AlertTriangle size={14} className="text-amber-400 shrink-0" />
-              {toast}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* High Risk Block Modal */}
+      {showBlockModal && (
+        <HighRiskBlockModal
+          highRiskCount={[...selected].filter((id) => PENDING_DOCS.find((d) => d.id === id)?.risk === "HIGH").length}
+          onClose={() => setShowBlockModal(false)}
+        />
+      )}
     </>
   );
 }

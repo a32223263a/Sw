@@ -191,7 +191,8 @@ const PRESET_REASONS = ["금액 오타로 인한 회수 및 재작성", "결재�
 function WithdrawModal({ onConfirm, onClose }: { onConfirm: () => void; onClose: () => void }) {
   const [reason, setReason] = useState("");
   const MAX = 200;
-  const canConfirm = reason.trim().length >= 5;
+  const MIN = 10;
+  const canConfirm = reason.trim().length >= MIN;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -249,7 +250,7 @@ function WithdrawModal({ onConfirm, onClose }: { onConfirm: () => void; onClose:
           <div className="space-y-2">
             <label className="text-sm text-gray-700">
               회수 사유 <span className="text-red-500">*</span>
-              <span className="text-xs text-gray-400 ml-1" style={{ fontWeight: 400 }}>(최소 5자 이상)</span>
+              <span className="text-xs text-gray-400 ml-1" style={{ fontWeight: 400 }}>(최소 10자 이상)</span>
             </label>
             {/* 사유 템플릿 칩 */}
             <div className="flex flex-wrap gap-1.5">
@@ -268,14 +269,14 @@ function WithdrawModal({ onConfirm, onClose }: { onConfirm: () => void; onClose:
               onChange={(e) => setReason(e.target.value.slice(0, MAX))}
               placeholder="회수 사유를 직접 입력하거나 위에서 선택하세요."
               rows={3}
-              className={`w-full px-3 py-2.5 text-sm border rounded-lg resize-none focus:outline-none transition-all ${reason.trim().length >= 5 ? "border-blue-400 bg-white focus:ring-2 focus:ring-blue-100" : "border-gray-300 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100"}`}
+              className={`w-full px-3 py-2.5 text-sm border rounded-lg resize-none focus:outline-none transition-all ${reason.trim().length >= MIN ? "border-blue-400 bg-white focus:ring-2 focus:ring-blue-100" : "border-gray-300 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100"}`}
             />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                {reason.trim().length > 0 && reason.trim().length < 5 && (
-                  <><AlertTriangle size={11} className="text-amber-500" /><span className="text-xs text-amber-600">{5 - reason.trim().length}자 더 입력하면 회수 실행이 가능합니다.</span></>
+                {reason.trim().length > 0 && reason.trim().length < MIN && (
+                  <><AlertTriangle size={11} className="text-amber-500" /><span className="text-xs text-amber-600">{MIN - reason.trim().length}자 더 입력하면 회수 실행이 가능합니다.</span></>
                 )}
-                {reason.trim().length >= 5 && (
+                {reason.trim().length >= MIN && (
                   <><CheckCircle2 size={11} className="text-emerald-500" /><span className="text-xs text-emerald-600">사유가 입력되었습니다.</span></>
                 )}
               </div>

@@ -21,9 +21,12 @@ import {
   X,
   Layers,
   Braces,
-  ListChecks,
   PanelLeft,
   PanelRight,
+  Settings,
+  Info,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────
@@ -141,6 +144,7 @@ export function FormBuilderPage() {
   const [showJSON, setShowJSON] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const selected = useMemo(() => fields.find((f) => f.id === selectedId) ?? null, [fields, selectedId]);
 
@@ -374,7 +378,6 @@ export function FormBuilderPage() {
                               <span className="text-sm text-gray-800" style={{ fontWeight: 600 }}>{f.label}</span>
                               {f.required && <span className="text-xs text-red-500">*</span>}
                               <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{FIELD_LABEL[f.type]}</span>
-                              <code className="text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-mono">{`{${f.key}}`}</code>
                             </div>
                             <FieldPreview field={f} />
                           </div>
@@ -425,47 +428,56 @@ export function FormBuilderPage() {
           <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
             <PanelRight size={13} className="text-gray-500" />
             <span className="text-xs text-gray-700" style={{ fontWeight: 600 }}>
-              {selected ? "필드 속성 · JSON 매핑" : "양식 설정"}
+              {selected ? "필드 속성" : "양식 설정"}
             </span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {selected ? (
               <>
+                {/* ─── 사용자 노출 속성 (UX 추상화) ─── */}
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-400">기본 설정</p>
+                </div>
+
                 <div className="space-y-1.5">
-                  <label className="text-xs text-gray-500">표시 라벨</label>
+                  <label className="text-xs text-gray-700">표시 이름 (Label)</label>
                   <input
                     value={selected.label}
                     onChange={(e) => updateField(selected.id, { label: e.target.value })}
                     className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    placeholder="사용자에게 보여질 이름"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs text-gray-500">JSON 매핑 키</label>
-                    <span className="text-xs text-indigo-600">form_data.{selected.key}</span>
+
+                {(selected.type === "text" || selected.type === "number" || selected.type === "longtext") && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-gray-700">플레이스홀더</label>
+                    <input
+                      value={selected.placeholder ?? ""}
+                      onChange={(e) => updateField(selected.id, { placeholder: e.target.value })}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+                      placeholder="입력 안내 텍스트"
+                    />
                   </div>
-                  <input
-                    value={selected.key}
-                    onChange={(e) => updateField(selected.id, { key: e.target.value.replace(/[^a-z0-9_]/g, "_") })}
-                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                    placeholder="snake_case_only"
-                  />
-                  <p className="text-xs text-gray-400">기안자의 입력값은 이 키로 DB에 저장됩니다.</p>
-                </div>
-                <label className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
-                  <span className="text-xs text-gray-700">필수 입력</span>
-                  <input
-                    type="checkbox"
-                    checked={selected.required}
-                    onChange={(e) => updateField(selected.id, { required: e.target.checked })}
-                    className="w-3.5 h-3.5"
-                  />
-                </label>
+                )}
+
+                <button
+                  onClick={() => updateField(selected.id, { required: !selected.required })}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all cursor-pointer ${selected.required ? "bg-blue-50 border-blue-300 text-blue-700" : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    {selected.required ? <ToggleRight size={16} className="text-blue-600" /> : <ToggleLeft size={16} className="text-gray-400" />}
+                    <span className="text-xs">필수 입력</span>
+                  </div>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${selected.required ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-500"}`}>
+                    {selected.required ? "필수" : "선택"}
+                  </span>
+                </button>
 
                 {selected.type === "select" && (
                   <div className="space-y-1.5">
-                    <label className="text-xs text-gray-500">선택 옵션 (줄바꿈 구분)</label>
+                    <label className="text-xs text-gray-700">선택 옵션 (줄바꿈 구분)</label>
                     <textarea
                       value={(selected.options ?? []).join("\n")}
                       onChange={(e) => updateField(selected.id, { options: e.target.value.split("\n").filter(Boolean) })}
@@ -478,7 +490,7 @@ export function FormBuilderPage() {
                 {selected.type === "table" && (
                   <>
                     <div className="space-y-1.5">
-                      <label className="text-xs text-gray-500">열 헤더 (쉼표 구분)</label>
+                      <label className="text-xs text-gray-700">열 헤더 (쉼표 구분)</label>
                       <input
                         value={(selected.cols ?? []).join(", ")}
                         onChange={(e) => updateField(selected.id, { cols: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
@@ -486,7 +498,7 @@ export function FormBuilderPage() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs text-gray-500">기본 행 수</label>
+                      <label className="text-xs text-gray-700">기본 행 수</label>
                       <input
                         type="number"
                         min={1}
@@ -498,16 +510,52 @@ export function FormBuilderPage() {
                   </>
                 )}
 
-                {(selected.type === "text" || selected.type === "number" || selected.type === "longtext") && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-gray-500">플레이스홀더</label>
-                    <input
-                      value={selected.placeholder ?? ""}
-                      onChange={(e) => updateField(selected.id, { placeholder: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-400"
-                    />
-                  </div>
-                )}
+                {/* ─── 고급 설정 아코디언 (개발자용 JSON 매핑 키) ─── */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setAdvancedOpen((v) => !v)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${advancedOpen ? "bg-gray-100" : "bg-gray-50 hover:bg-gray-100"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings size={12} className="text-gray-500" />
+                      <span className="text-xs text-gray-600">고급 설정 (개발자용)</span>
+                    </div>
+                    <ChevronDown size={12} className={`text-gray-400 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {advancedOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-3 py-3 space-y-3 bg-white border-t border-gray-200">
+                          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded px-2.5 py-2">
+                            <Info size={11} className="text-amber-600 mt-0.5 shrink-0" />
+                            <p className="text-xs text-amber-700 leading-relaxed">
+                              라벨을 기준으로 자동 생성되었습니다. 변경 시 기존 데이터와 불일치가 발생할 수 있습니다.
+                            </p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs text-gray-600">JSON 매핑 키</label>
+                              <span className="text-xs text-indigo-600 font-mono">form_data.{selected.key}</span>
+                            </div>
+                            <input
+                              value={selected.key}
+                              onChange={(e) => updateField(selected.id, { key: e.target.value.replace(/[^a-z0-9_]/g, "_") })}
+                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                              placeholder="snake_case_only"
+                            />
+                            <p className="text-xs text-gray-400">기안자의 입력값은 이 키로 DB(JSONB)에 저장됩니다.</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
                 <div className="border-t border-gray-200 pt-3">
                   <button
@@ -521,7 +569,7 @@ export function FormBuilderPage() {
             ) : (
               <div className="text-center text-gray-400 py-8">
                 <Eye size={24} className="mx-auto mb-2 text-gray-300" />
-                <p className="text-xs">캔버스에서 필드를 선택하면 속성과 JSON 매핑을 설정할 수 있습니다.</p>
+                <p className="text-xs">캔버스에서 필드를 선택하면 속성을 설정할 수 있습니다.</p>
               </div>
             )}
           </div>
