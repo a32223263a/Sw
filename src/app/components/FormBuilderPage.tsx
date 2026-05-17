@@ -27,6 +27,10 @@ import {
   Info,
   ToggleLeft,
   ToggleRight,
+  FileText,
+  Database,
+  ArrowRight,
+  Zap,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────
@@ -145,6 +149,7 @@ export function FormBuilderPage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [canvasTab, setCanvasTab] = useState<"html" | "json">("html");
 
   const selected = useMemo(() => fields.find((f) => f.id === selectedId) ?? null, [fields, selectedId]);
 
@@ -246,10 +251,10 @@ export function FormBuilderPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => setShowJSON((v) => !v)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border transition-colors ${showJSON ? "bg-indigo-50 border-indigo-300 text-indigo-700" : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"}`}
+              onClick={() => setCanvasTab((t) => t === "json" ? "html" : "json")}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border transition-colors ${canvasTab === "json" ? "bg-indigo-50 border-indigo-300 text-indigo-700" : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"}`}
             >
-              <Braces size={13} /> JSON 스키마 {showJSON ? "숨기기" : "미리보기"}
+              <Braces size={13} /> {canvasTab === "json" ? "서식 디자인으로" : "JSON 매핑 보기"}
             </button>
             <button
               onClick={handleSave}
@@ -321,101 +326,250 @@ export function FormBuilderPage() {
         </aside>
 
         {/* ─── 중앙: 캔버스 ─── */}
-        <main className="flex-1 overflow-y-auto p-6 min-w-0">
-          {/* 문서 캔버스 */}
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white border border-gray-300 rounded shadow-sm">
-              {/* 문서 헤더 (회사 서식) */}
-              <div className="flex items-start justify-between px-6 py-4 border-b border-gray-300 bg-white gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded bg-blue-700 flex items-center justify-center shrink-0">
-                    <span className="text-white text-xs" style={{ fontWeight: 700 }}>CORP</span>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400 mb-0.5">전자결재 · 사내 고유 서식</p>
-                    <h3 className="text-gray-900" style={{ fontWeight: 700 }}>{formTitle || "(제목 없음)"}</h3>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end shrink-0">
-                  <p className="text-xs text-gray-400 mb-1">결재</p>
-                  <div className="flex border border-gray-400">
-                    {["기안자", ...approverLine.map((a) => a.title)].map((label) => (
-                      <div key={label} className="border-r border-gray-400 last:border-r-0 px-3 py-1 bg-gray-50 text-center" style={{ minWidth: 56 }}>
-                        <p className="text-xs text-gray-600" style={{ fontWeight: 600 }}>{label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* ── 탭 헤더 (sticky) ── */}
+          <div className="shrink-0 bg-white border-b border-gray-200 px-6 flex items-center gap-0">
+            <button
+              onClick={() => setCanvasTab("html")}
+              className={`flex items-center gap-1.5 px-4 py-3 text-xs border-b-2 transition-colors ${canvasTab === "html" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+              style={{ fontWeight: canvasTab === "html" ? 600 : 400 }}
+            >
+              <FileText size={12} /> 서식 디자인 (HTML)
+            </button>
+            <button
+              onClick={() => setCanvasTab("json")}
+              className={`flex items-center gap-1.5 px-4 py-3 text-xs border-b-2 transition-colors ${canvasTab === "json" ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+              style={{ fontWeight: canvasTab === "json" ? 600 : 400 }}
+            >
+              <Braces size={12} /> 데이터 매핑 (JSON)
+            </button>
 
-              {/* 캔버스 빈 상태 */}
-              {fields.length === 0 ? (
-                <div className="px-6 py-16 text-center text-gray-400">
-                  <Layers size={32} className="mx-auto mb-3 text-gray-300" />
-                  <p className="text-sm">좌측 도구상자에서 입력 필드를 추가해 양식을 구성하세요.</p>
-                </div>
-              ) : (
-                <div className="p-6 space-y-3">
-                  {fields.map((f, idx) => {
-                    const isSel = f.id === selectedId;
-                    return (
-                      <motion.div
-                        key={f.id}
-                        layout
-                        onClick={() => setSelectedId(f.id)}
-                        className={`relative group rounded-lg border transition-colors cursor-pointer ${isSel ? "border-blue-400 ring-2 ring-blue-100 bg-blue-50/30" : "border-transparent hover:border-gray-300"} p-3`}
-                      >
-                        {/* row controls */}
-                        <div className={`absolute -left-9 top-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 transition-opacity ${isSel ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-                          <button onClick={(e) => { e.stopPropagation(); move(f.id, -1); }} className="w-6 h-5 text-gray-400 hover:text-gray-700 text-xs">▲</button>
-                          <GripVertical size={12} className="text-gray-300" />
-                          <button onClick={(e) => { e.stopPropagation(); move(f.id, 1); }} className="w-6 h-5 text-gray-400 hover:text-gray-700 text-xs">▼</button>
-                        </div>
-
-                        <div className="flex items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-sm text-gray-800" style={{ fontWeight: 600 }}>{f.label}</span>
-                              {f.required && <span className="text-xs text-red-500">*</span>}
-                              <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{FIELD_LABEL[f.type]}</span>
-                            </div>
-                            <FieldPreview field={f} />
-                          </div>
-                          {isSel && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); removeField(f.id); }}
-                              className="shrink-0 w-7 h-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
+            {/* ADR-004 Badge */}
+            <div className="ml-auto flex items-center gap-1.5 text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-full">
+              <Zap size={11} className="text-indigo-600" />
+              <span style={{ fontWeight: 600 }}>ADR-004: HTML/JSON 분리 저장 아키텍처</span>
             </div>
+          </div>
 
-            {/* JSON 미리보기 (ADR 어필) */}
-            <AnimatePresence>
-              {showJSON && (
+          {/* ── 탭 콘텐츠 ── */}
+          <div className="flex-1 overflow-y-auto">
+            <AnimatePresence mode="wait">
+              {canvasTab === "html" ? (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 overflow-hidden"
+                  key="html"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.18 }}
+                  className="p-6"
                 >
-                  <div className="bg-gray-900 rounded-lg border border-gray-800">
-                    <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">
-                      <div className="flex items-center gap-2 text-xs text-gray-300">
-                        <Code2 size={12} />
-                        <span style={{ fontWeight: 600 }}>form_schema.json</span>
-                        <span className="text-gray-500">— 저장 시 DB의 JSONB 컬럼에 분리 적재</span>
+                  {/* ── Tab 1: 서식 디자인 WYSIWYG 캔버스 ── */}
+                  <div className="max-w-3xl mx-auto">
+                    <div className="bg-white border border-gray-300 rounded shadow-sm">
+                      {/* 문서 헤더 (회사 서식) */}
+                      <div className="flex items-start justify-between px-6 py-4 border-b border-gray-300 bg-white gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded bg-blue-700 flex items-center justify-center shrink-0">
+                            <span className="text-white text-xs" style={{ fontWeight: 700 }}>CORP</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400 mb-0.5">전자결재 · 사내 고유 서식 (HTML)</p>
+                            <h3 className="text-gray-900" style={{ fontWeight: 700 }}>{formTitle || "(제목 없음)"}</h3>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0">
+                          <p className="text-xs text-gray-400 mb-1">결재</p>
+                          <div className="flex border border-gray-400">
+                            {["기안자", ...approverLine.map((a) => a.title)].map((label) => (
+                              <div key={label} className="border-r border-gray-400 last:border-r-0 px-3 py-1 bg-gray-50 text-center" style={{ minWidth: 56 }}>
+                                <p className="text-xs text-gray-600" style={{ fontWeight: 600 }}>{label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-xs bg-indigo-900/40 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded">ADR-004</span>
+
+                      {/* 캔버스 빈 상태 */}
+                      {fields.length === 0 ? (
+                        <div className="px-6 py-16 text-center text-gray-400">
+                          <Layers size={32} className="mx-auto mb-3 text-gray-300" />
+                          <p className="text-sm">좌측 도구상자에서 입력 필드를 추가해 양식을 구성하세요.</p>
+                        </div>
+                      ) : (
+                        <div className="p-6 space-y-3">
+                          {fields.map((f) => {
+                            const isSel = f.id === selectedId;
+                            return (
+                              <motion.div
+                                key={f.id}
+                                layout
+                                onClick={() => setSelectedId(f.id)}
+                                className={`relative group rounded-lg border transition-colors cursor-pointer ${isSel ? "border-blue-400 ring-2 ring-blue-100 bg-blue-50/30" : "border-transparent hover:border-gray-300"} p-3`}
+                              >
+                                <div className={`absolute -left-9 top-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 transition-opacity ${isSel ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                                  <button onClick={(e) => { e.stopPropagation(); move(f.id, -1); }} className="w-6 h-5 text-gray-400 hover:text-gray-700 text-xs">▲</button>
+                                  <GripVertical size={12} className="text-gray-300" />
+                                  <button onClick={(e) => { e.stopPropagation(); move(f.id, 1); }} className="w-6 h-5 text-gray-400 hover:text-gray-700 text-xs">▼</button>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <span className="text-sm text-gray-800" style={{ fontWeight: 600 }}>{f.label}</span>
+                                      {f.required && <span className="text-xs text-red-500">*</span>}
+                                      <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{FIELD_LABEL[f.type]}</span>
+                                    </div>
+                                    <FieldPreview field={f} />
+                                  </div>
+                                  {isSel && (
+                                    <button onClick={(e) => { e.stopPropagation(); removeField(f.id); }} className="shrink-0 w-7 h-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    <pre className="px-4 py-3 text-xs text-emerald-300 font-mono overflow-x-auto max-h-72 leading-relaxed">{schemaJSON}</pre>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="json"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  transition={{ duration: 0.18 }}
+                  className="p-6"
+                >
+                  {/* ── Tab 2: 데이터 매핑 JSON 바인딩 뷰 ── */}
+                  <div className="max-w-3xl mx-auto space-y-4">
+
+                    {/* ADR-004 설명 배너 */}
+                    <div className="flex items-start gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3.5">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Database size={13} className="text-white" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-sm text-indigo-900" style={{ fontWeight: 600 }}>ADR-004: HTML 서식 ↔ JSON 데이터 분리 아키텍처</p>
+                        <p className="text-xs text-indigo-700 leading-relaxed">
+                          기안자가 데이터를 입력하면 <strong>시각적 서식(HTML)</strong>은 그대로 유지되고, <strong>입력 데이터</strong>만 아래 키 구조로 DB의 JSONB 컬럼에 분리 저장됩니다.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 아키텍처 흐름도 */}
+                    <div className="flex items-center justify-center gap-3 py-2">
+                      <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+                        <FileText size={14} className="text-blue-600" />
+                        <div>
+                          <p className="text-xs text-blue-800" style={{ fontWeight: 600 }}>HTML 서식</p>
+                          <p className="text-xs text-blue-600">forms_html 컬럼</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <ArrowRight size={16} className="text-gray-400" />
+                        <span className="text-xs text-gray-400">분리 저장</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5">
+                        <Database size={14} className="text-indigo-600" />
+                        <div>
+                          <p className="text-xs text-indigo-800" style={{ fontWeight: 600 }}>JSON 스키마</p>
+                          <p className="text-xs text-indigo-600">forms_json JSONB 컬럼</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 필드별 JSON 키 바인딩 테이블 */}
+                    <div className="bg-white border border-gray-300 rounded shadow-sm overflow-hidden">
+                      {/* 문서 헤더 (HTML 레이아웃 스냅샷) */}
+                      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-300 bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded bg-blue-700 flex items-center justify-center shrink-0">
+                            <span className="text-white text-xs" style={{ fontWeight: 700 }}>CORP</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400">HTML 서식 레이아웃</p>
+                            <p className="text-sm text-gray-800" style={{ fontWeight: 600 }}>{formTitle}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                          HTML 고정 영역 (read-only)
+                        </span>
+                      </div>
+
+                      {/* 필드 매핑 행 */}
+                      {fields.length === 0 ? (
+                        <div className="py-10 text-center text-gray-400">
+                          <p className="text-sm">HTML 탭에서 필드를 추가하면 JSON 매핑이 여기에 표시됩니다.</p>
+                        </div>
+                      ) : (
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-200">
+                              <th className="text-left px-4 py-2 text-xs text-gray-500 w-8" style={{ fontWeight: 600 }}>#</th>
+                              <th className="text-left px-4 py-2 text-xs text-gray-500 w-28" style={{ fontWeight: 600 }}>표시 라벨 (HTML)</th>
+                              <th className="text-left px-4 py-2 text-xs text-gray-500" style={{ fontWeight: 600 }}>
+                                <span className="flex items-center gap-1"><ArrowRight size={11} /> JSON 매핑 키 (DB 저장)</span>
+                              </th>
+                              <th className="text-left px-4 py-2 text-xs text-gray-500 w-20" style={{ fontWeight: 600 }}>타입</th>
+                              <th className="text-left px-4 py-2 text-xs text-gray-500 w-14" style={{ fontWeight: 600 }}>필수</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {fields.map((f, idx) => (
+                              <tr
+                                key={f.id}
+                                onClick={() => { setSelectedId(f.id); setCanvasTab("html"); }}
+                                className="border-b border-gray-100 last:border-0 hover:bg-indigo-50/30 cursor-pointer transition-colors"
+                              >
+                                <td className="px-4 py-3 text-xs text-gray-400">{idx + 1}</td>
+                                <td className="px-4 py-3">
+                                  <span className="text-sm text-gray-700" style={{ fontWeight: 500 }}>{f.label}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <code className="text-xs font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                                      form_data.{f.key}
+                                    </code>
+                                    {f.type === "number" && (
+                                      <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                        💡 리스크 집계 대상
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{FIELD_LABEL[f.type]}</span>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {f.required
+                                    ? <span className="text-xs text-red-600 bg-red-50 px-1.5 py-0.5 rounded">필수</span>
+                                    : <span className="text-xs text-gray-400">-</span>}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+
+                    {/* JSON 스키마 미리보기 (ADR-004 어필 — Tab 2에서 항상 노출) */}
+                    <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-800">
+                        <div className="flex items-center gap-2 text-xs text-gray-300">
+                          <Code2 size={12} />
+                          <span style={{ fontWeight: 600 }}>form_schema.json</span>
+                          <span className="text-gray-500">— DB의 JSONB 컬럼에 분리 적재 (ADR-004)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-emerald-900/40 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded">JSONB</span>
+                          <span className="text-xs bg-indigo-900/40 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded">ADR-004</span>
+                        </div>
+                      </div>
+                      <pre className="px-4 py-3 text-xs text-emerald-300 font-mono overflow-x-auto max-h-72 leading-relaxed">{schemaJSON}</pre>
+                    </div>
                   </div>
                 </motion.div>
               )}

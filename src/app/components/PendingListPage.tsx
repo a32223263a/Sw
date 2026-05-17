@@ -77,8 +77,8 @@ function HighRiskBlockModal({
               <ShieldAlert size={20} className="text-red-600" />
             </div>
             <div className="flex-1">
-              <h3 className="text-gray-900">일괄 결재 차단</h3>
-              <p className="text-xs text-red-600 mt-0.5">보안 정책에 따라 일괄 승인이 차단되었습니다.</p>
+              <h3 className="text-gray-900">보안 정책에 의해 일괄 승인이 차단되었습니다.</h3>
+              <p className="text-xs text-red-600 mt-0.5">422 HIGH_RISK_DOCUMENT_INCLUDED</p>
             </div>
             <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-100 transition-colors">
               <X size={15} />
@@ -141,7 +141,7 @@ function HighRiskBlockModal({
             onClick={onClose}
             className="flex items-center gap-2 px-5 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >
-            <ArrowRight size={13} /> 선택 다시 조정하기
+            <ArrowRight size={13} /> 선택 초기화 및 개별 결재 진행하기
           </button>
         </div>
       </motion.div>

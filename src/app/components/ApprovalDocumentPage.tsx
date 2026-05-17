@@ -55,7 +55,8 @@ const DEFAULT_APPROVERS: Approver[] = [
   { id: 2, name: "이수연", title: "부장", dept: "전략기획본부", order: 2, initials: "수" },
 ];
 
-type FileItem = { id: number; name: string; size: string };
+type FileItem = { id: number; name: string; size: string; isPdf?: boolean };
+type OcrStatus = "processing" | "done";
 
 /* ─────────────────────────────────────────────────
    상신 확인 모달 (방어적 설계 — 재확인 패턴)
@@ -381,9 +382,17 @@ export function ApprovalDocumentPage() {
   const [isFormDropdownOpen, setIsFormDropdownOpen] = useState(false);
   const [title, setTitle] = useState("2026년 2분기 IT 기획팀 운영 경비 지출결의서");
   const [approvers] = useState<Approver[]>(DEFAULT_APPROVERS);
-  const [files, setFiles] = useState<FileItem[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([
+    { id: 1, name: "영수증_2분기_IT비용.pdf", size: "1.4 MB", isPdf: true },
+  ]);
   const [showConstraintTooltip, setShowConstraintTooltip] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState<Record<number, OcrStatus>>({ 1: "processing" });
+
+  useEffect(() => {
+    const t = setTimeout(() => setOcrStatus((prev) => ({ ...prev, 1: "done" })), 4000);
+    return () => clearTimeout(t);
+  }, []);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [documentData, setDocumentData] = useState<DocumentData>({
@@ -417,12 +426,22 @@ export function ApprovalDocumentPage() {
     const newFiles: FileItem[] = Array.from(fileList).map((f, i) => ({
       id: Date.now() + i,
       name: f.name,
+      isPdf: f.name.toLowerCase().endsWith(".pdf"),
       size:
         f.size < 1024 * 1024
           ? `${(f.size / 1024).toFixed(1)} KB`
           : `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
     }));
     setFiles((prev) => [...prev, ...newFiles]);
+    // PDF 파일에 대해 OCR 시뮬레이션
+    newFiles.forEach((f) => {
+      if (f.isPdf) {
+        setOcrStatus((prev) => ({ ...prev, [f.id]: "processing" }));
+        setTimeout(() => {
+          setOcrStatus((prev) => ({ ...prev, [f.id]: "done" }));
+        }, 3500 + Math.random() * 1500);
+      }
+    });
     e.target.value = "";
   };
 
@@ -627,18 +646,37 @@ export function ApprovalDocumentPage() {
                     </div>
                     {files.length > 0 && (
                       <div className="space-y-1.5">
-                        {files.map((file) => (
-                          <div key={file.id} className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                            <div className="flex items-center gap-2 text-sm text-gray-700">
-                              <Paperclip size={13} className="text-gray-400" />
-                              <span>{file.name}</span>
-                              <span className="text-xs text-gray-400">({file.size})</span>
+                        {files.map((file) => {
+                          const ocr = ocrStatus[file.id];
+                          return (
+                            <div key={file.id} className={`flex items-center justify-between px-3 py-2.5 border rounded-md transition-colors ${ocr === "processing" ? "bg-purple-50 border-purple-200" : "bg-gray-50 border-gray-200"}`}>
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <Paperclip size={13} className={ocr === "processing" ? "text-purple-500" : "text-gray-400"} />
+                                <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                                <span className="text-xs text-gray-400 shrink-0">({file.size})</span>
+                                {/* OCR 상태 배지 */}
+                                {ocr === "processing" && (
+                                  <span className="flex items-center gap-1.5 text-xs bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full shrink-0 ml-1">
+                                    <motion.div
+                                      className="w-2.5 h-2.5 border-2 border-purple-500 border-t-transparent rounded-full shrink-0"
+                                      animate={{ rotate: 360 }}
+                                      transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
+                                    />
+                                    비동기 OCR 텍스트 추출 중...
+                                  </span>
+                                )}
+                                {ocr === "done" && (
+                                  <span className="flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0 ml-1">
+                                    <CheckCircle2 size={10} /> OCR 완료 · 텍스트 추출됨
+                                  </span>
+                                )}
+                              </div>
+                              <button onClick={() => removeFile(file.id)} className="text-gray-400 hover:text-red-500 transition-colors ml-2 shrink-0">
+                                <X size={14} />
+                              </button>
                             </div>
-                            <button onClick={() => removeFile(file.id)} className="text-gray-400 hover:text-red-500 transition-colors">
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

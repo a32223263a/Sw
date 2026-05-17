@@ -186,7 +186,7 @@ function EditModal({
 /* ─────────────────────────────────────────────────
    회수 모달 (방어적 설계 3 — 재확인 패턴)
 ───────────────────────────────────────────────── */
-const PRESET_REASONS = ["금액 오타로 인한 회수 및 재작성", "결재선 변경 필요", "첨부 서류 누락", "내용 수정 후 재상신 예정"];
+const PRESET_REASONS = ["금액 오타로 인한 회수 및 재작성", "결재선 변경이 필요하여 회수합니다", "첨부 서류 누락으로 재작성 필요", "내용 수정 후 재상신 예정입니다"];
 
 function WithdrawModal({ onConfirm, onClose }: { onConfirm: () => void; onClose: () => void }) {
   const [reason, setReason] = useState("");
