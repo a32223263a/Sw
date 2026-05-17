@@ -8,6 +8,7 @@ import { HighRiskApprovalPage } from "./components/HighRiskApprovalPage";
 import { RiskCriteriaPage } from "./components/RiskCriteriaPage";
 import { PendingListPage } from "./components/PendingListPage";
 import { LoginPage } from "./components/LoginPage";
+import { FormBuilderPage } from "./components/FormBuilderPage";
 
 /* ── 기안자 뷰 — 박도윤 ── */
 function DrafterRoot() {
@@ -83,6 +84,7 @@ export const router = createBrowserRouter([
     Component: AdminRoot,
     children: [
       { index: true, Component: RiskCriteriaPage },
+      { path: "forms", Component: FormBuilderPage },
     ],
   },
 

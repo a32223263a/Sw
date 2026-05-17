@@ -8,6 +8,7 @@ import {
   Search,
   ChevronDown,
   User,
+  Sparkles,
 } from "lucide-react";
 
 type NavItem = {
@@ -23,6 +24,7 @@ const navItems: NavItem[] = [
   { id: "draft", path: "/drafts", icon: <FolderOpen size={16} />, label: "내 기안함", badge: 3 },
   { id: "pending", path: "/pending", icon: <Inbox size={16} />, label: "결재 대기함", badge: 7 },
   { id: "dept", path: "/dept", icon: <Settings size={16} />, label: "부서 관리" },
+  { id: "forms", path: "/dept/forms", icon: <Sparkles size={16} />, label: "양식 빌더" },
 ];
 
 export function AppLayout({
@@ -38,6 +40,7 @@ export function AppLayout({
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
+    if (path === "/dept") return location.pathname === "/dept";
     return location.pathname.startsWith(path);
   };
 

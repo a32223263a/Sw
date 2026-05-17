@@ -25,9 +25,6 @@ import {
   Timer,
   Info,
   ChevronDown,
-  ListChecks,
-  Square,
-  SquareCheck,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────
@@ -426,152 +423,6 @@ function RejectModal({ onConfirm, onClose }: { onConfirm: () => void; onClose: (
 }
 
 /* ─────────────────────────────────────────────────
-   Batch Approve Modal
-───────────────────────────────────────────────── */
-const BATCH_DOCS = [
-  { id: "b1", title: "출장 신청서 — 대전 R&D 센터 방문", dept: "IT기획팀", risk: "LOW", date: "2026-05-04" },
-  { id: "b2", title: "비품 구매 요청서 — 사무용 의자 4개", dept: "IT기획팀", risk: "LOW", date: "2026-05-03" },
-  { id: "b3", title: "업무 협조 요청 — 회의실 예약 시스템 연동", dept: "IT기획팀", risk: "LOW", date: "2026-05-02" },
-];
-
-function BatchApproveModal({
-  twoFAActive,
-  onRequest2FA,
-  onConfirm,
-  onClose,
-}: {
-  twoFAActive: boolean;
-  onRequest2FA: () => void;
-  onConfirm: (ids: string[]) => void;
-  onClose: () => void;
-}) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [comment, setComment] = useState("");
-  const toggleAll = () =>
-    setSelected(selected.size === BATCH_DOCS.length ? new Set() : new Set(BATCH_DOCS.map((d) => d.id)));
-  const toggle = (id: string) => {
-    const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
-    setSelected(next);
-  };
-  const canConfirm = twoFAActive && selected.size > 0;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <motion.div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose} />
-      <motion.div
-        className="relative bg-white rounded-2xl shadow-2xl w-[560px] max-h-[88vh] flex flex-col overflow-hidden border border-gray-200"
-        initial={{ opacity: 0, scale: 0.94, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-      >
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-200 bg-emerald-50 shrink-0">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
-                <ListChecks size={20} className="text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="text-gray-900">일괄 승인</h3>
-                <p className="text-xs text-emerald-700 mt-0.5">저위험(LOW) 문서를 한 번에 승인합니다</p>
-              </div>
-            </div>
-            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-emerald-100 transition-colors">
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          {/* 2FA warning if expired */}
-          {!twoFAActive && (
-            <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Lock size={14} className="text-red-600 shrink-0" />
-                <p className="text-xs text-red-700">일괄 승인도 <strong>2FA 인증</strong>이 필요합니다.</p>
-              </div>
-              <button onClick={onRequest2FA} className="flex items-center gap-1.5 text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors shrink-0">
-                <Fingerprint size={11} /> 재인증
-              </button>
-            </div>
-          )}
-          {twoFAActive && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
-              <ShieldCheck size={14} className="text-emerald-600" />
-              <p className="text-xs text-emerald-700">2FA 인증이 활성화되어 있습니다. 승인할 문서를 선택하세요.</p>
-            </div>
-          )}
-
-          {/* Document list */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            {/* Select all header */}
-            <div
-              className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={toggleAll}
-            >
-              <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${selected.size === BATCH_DOCS.length ? "bg-emerald-500 border-emerald-500" : "border-gray-400"}`}>
-                {selected.size === BATCH_DOCS.length && <CheckCircle2 size={11} className="text-white" />}
-                {selected.size > 0 && selected.size < BATCH_DOCS.length && <div className="w-2 h-0.5 bg-gray-500 rounded" />}
-              </div>
-              <span className="text-xs text-gray-600" style={{ fontWeight: 600 }}>전체 선택 ({BATCH_DOCS.length}건)</span>
-              <span className="ml-auto text-xs text-gray-400">{selected.size}건 선택됨</span>
-            </div>
-
-            {BATCH_DOCS.map((doc, idx) => (
-              <div
-                key={doc.id}
-                className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors ${idx < BATCH_DOCS.length - 1 ? "border-b border-gray-100" : ""} ${selected.has(doc.id) ? "bg-emerald-50" : "hover:bg-gray-50"}`}
-                onClick={() => toggle(doc.id)}
-              >
-                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 mt-0.5 transition-all ${selected.has(doc.id) ? "bg-emerald-500 border-emerald-500" : "border-gray-300"}`}>
-                  {selected.has(doc.id) && <CheckCircle2 size={11} className="text-white" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-800">{doc.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{doc.dept} · {doc.date}</p>
-                </div>
-                <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full shrink-0">🟢 {doc.risk}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Comment */}
-          <div className="space-y-1.5">
-            <label className="text-sm text-gray-700">일괄 승인 의견 <span className="text-gray-400 text-xs" style={{ fontWeight: 400 }}>(선택)</span></label>
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={2}
-              placeholder="일괄 승인 의견을 남길 수 있습니다."
-              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-3 shrink-0">
-          <p className="text-xs text-gray-400">
-            {selected.size > 0 ? <span className="text-emerald-600" style={{ fontWeight: 600 }}>{selected.size}건</span> : "0건"} 선택됨
-          </p>
-          <div className="flex gap-3">
-            <button onClick={onClose} className="px-5 py-2.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">취소</button>
-            <button
-              onClick={() => canConfirm && onConfirm([...selected])}
-              disabled={!canConfirm}
-              className={`flex items-center gap-2 px-5 py-2.5 text-sm rounded-lg transition-all ${canConfirm ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
-            >
-              <ListChecks size={13} /> 일괄 승인 실행
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────
    Main Page
 ───────────────────────────────────────────────── */
 export function HighRiskApprovalPage() {
@@ -592,9 +443,7 @@ export function HighRiskApprovalPage() {
   // Modal states
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [showBatchModal, setShowBatchModal] = useState(false);
-  const [done, setDone] = useState<"approved" | "rejected" | "batch" | null>(null);
-  const [batchCount, setBatchCount] = useState(0);
+  const [done, setDone] = useState<"approved" | "rejected" | null>(null);
 
   // Scroll tracking
   const handleScroll = useCallback(() => {
@@ -641,19 +490,15 @@ export function HighRiskApprovalPage() {
           <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${done === "rejected" ? "bg-red-100 border-2 border-red-200" : "bg-emerald-100 border-2 border-emerald-200"}`}>
             {done === "rejected"
               ? <ThumbsDown size={30} className="text-red-600" />
-              : done === "batch"
-              ? <ListChecks size={30} className="text-emerald-600" />
               : <CheckCircle2 size={32} className="text-emerald-600" />}
           </div>
           <h3 className="text-gray-800 mb-1">
-            {done === "approved" ? "승인 완료" : done === "rejected" ? "반려 완료" : `일괄 승인 완료 (${batchCount}건)`}
+            {done === "approved" ? "승인 완료" : "반려 완료"}
           </h3>
           <p className="text-sm text-gray-500 mb-6">
             {done === "approved"
               ? "다음 결재자 이수연 부장에게 자동 전달됩니다."
-              : done === "rejected"
-              ? "기안자 박도윤에게 반려 알림이 발송됩니다."
-              : `선택한 ${batchCount}건의 문서가 일괄 승인 처리되었습니다.`}
+              : "기안자 박도윤에게 반려 알림이 발송됩니다."}
           </p>
           <button onClick={() => navigate("/pending")} className="w-full py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">결재 대기함으로 이동</button>
         </motion.div>
@@ -987,14 +832,6 @@ export function HighRiskApprovalPage() {
                 <ThumbsDown size={13} /> 반려
               </button>
 
-              {/* Batch approve button */}
-              <button
-                onClick={() => setShowBatchModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-emerald-400 hover:text-emerald-600 transition-all"
-              >
-                <ListChecks size={13} /> 일괄 승인
-              </button>
-
               {/* Approve button with tooltip */}
               <div className="relative group">
                 <button
@@ -1048,14 +885,6 @@ export function HighRiskApprovalPage() {
         <RejectModal
           onConfirm={() => { setShowRejectModal(false); setDone("rejected"); }}
           onClose={() => setShowRejectModal(false)}
-        />
-      )}
-      {showBatchModal && (
-        <BatchApproveModal
-          twoFAActive={twoFAState === "active"}
-          onRequest2FA={() => { setShowBatchModal(false); setShow2FAModal(true); }}
-          onConfirm={(ids) => { setBatchCount(ids.length); setShowBatchModal(false); setDone("batch"); }}
-          onClose={() => setShowBatchModal(false)}
         />
       )}
     </>
